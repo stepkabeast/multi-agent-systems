@@ -20,9 +20,15 @@ public class Main {
         // p.setParameter(Profile.MAIN_PORT, "10099");
         p.setParameter(Profile.GUI, "true");
         AgentContainer mainContainer = rt.createMainContainer(p);
+
+
         AgentController agent = mainContainer.createNewAgent("sample-agent", SampleAgent.class.getName(), null);
         agent.start();
 
-
+        String[] dummyNames = {"dummy1", "dummy2"};
+        for (String name : dummyNames) {
+            AgentController dummyAgent = mainContainer.createNewAgent(name, SampleAgent.class.getName(), null);
+            dummyAgent.start();
+        }
     }
 }
