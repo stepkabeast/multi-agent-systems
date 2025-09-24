@@ -32,14 +32,13 @@ public class Main {
             AgentController dummyAgent = mainContainer.createNewAgent(name, SampleAgent.class.getName(), null);
             dummyAgent.start();
         }*/
-        // Создание вычислителей
+
         String[] calculatorNames = {"calc1", "calc2", "calc3"};
         for (String name : calculatorNames) {
             AgentController calculator = mainContainer.createNewAgent(name, CalculatorAgent.class.getName(), null);
             calculator.start();
         }
 
-        // Создание координатора с передачей имен вычислителей
         Object[] argsForCoordinator = {calculatorNames};
         AgentController coordinator = mainContainer.createNewAgent("coordinator", Coordinator.class.getName(), argsForCoordinator);
         coordinator.start();
