@@ -6,7 +6,9 @@ import jade.core.Profile;
 import jade.core.ProfileImpl;
 import jade.wrapper.AgentController;
 import jade.wrapper.StaleProxyException;
+import main.CalculatorAgent;
 import main.SampleAgent;
+import main.Coordinator;
 
 
 public class Main {
@@ -25,10 +27,21 @@ public class Main {
         AgentController agent = mainContainer.createNewAgent("sample-agent", SampleAgent.class.getName(), null);
         agent.start();
 
-        String[] dummyNames = {"dummy1", "dummy2"};
+        /*String[] dummyNames = {"dummy1", "dummy2"};
         for (String name : dummyNames) {
             AgentController dummyAgent = mainContainer.createNewAgent(name, SampleAgent.class.getName(), null);
             dummyAgent.start();
+        }*/
+        // Создание вычислителей
+        String[] calculatorNames = {"calc1", "calc2", "calc3"};
+        for (String name : calculatorNames) {
+            AgentController calculator = mainContainer.createNewAgent(name, CalculatorAgent.class.getName(), null);
+            calculator.start();
         }
+
+        // Создание координатора с передачей имен вычислителей
+        Object[] argsForCoordinator = {calculatorNames};
+        AgentController coordinator = mainContainer.createNewAgent("coordinator", Coordinator.class.getName(), argsForCoordinator);
+        coordinator.start();
     }
 }
