@@ -4,6 +4,10 @@ import jade.core.Agent;
 import jade.lang.acl.ACLMessage;
 import jade.util.Logger;
 import jade.core.behaviours.CyclicBehaviour;
+import jade.domain.DFService;
+import jade.domain.FIPAException;
+import jade.domain.FIPAAgentManagement.DFAgentDescription;
+import jade.domain.FIPAAgentManagement.ServiceDescription;
 
 public class CalculatorAgent extends Agent {
     private Logger logger = Logger.getMyLogger(getClass().getName());
@@ -12,6 +16,21 @@ public class CalculatorAgent extends Agent {
     protected void setup() {
         logger.info("Агент-вычислитель " + getLocalName() + " создан.");
         System.out.println("Hello! Calculator Agent " + getAID().getName() + " is ready.");
+
+        // Регистрация в DF
+        DFAgentDescription dfd = new DFAgentDescription();
+        dfd.setName(getAID());
+        ServiceDescription sd = new ServiceDescription();
+        sd.setType("calculator");
+        sd.setName("calculator-service");
+        dfd.addServices(sd);
+
+        try {
+            DFService.register(this, dfd);
+        } catch (FIPAException e) {
+            logger.severe("Ошибка регистрации в DF: " + e.getMessage());
+        }
+
         addBehaviour(new RequestReceiverBehaviour());
     }
 
