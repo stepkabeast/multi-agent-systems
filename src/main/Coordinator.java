@@ -4,11 +4,16 @@ import jade.core.Agent;
 import jade.lang.acl.ACLMessage;
 import jade.util.Logger;
 import jade.core.behaviours.CyclicBehaviour;
+import jade.domain.DFService;
+import jade.domain.FIPAException;
+import jade.domain.FIPAAgentManagement.DFAgentDescription;
+import jade.domain.FIPAAgentManagement.ServiceDescription;
+import jade.domain.FIPAAgentManagement.SearchConstraints;
 import java.util.*;
 
 public class Coordinator extends Agent {
     private Logger logger = Logger.getMyLogger(getClass().getName());
-    private List<String> calculatorNames;
+    private List<String> calculatorNames = new ArrayList<>();
     private Map<String, Integer> responses = new HashMap<>();
     private int expectedResponses;
     private int totalSum = 0;
@@ -18,9 +23,64 @@ public class Coordinator extends Agent {
     protected void setup() {
         logger.info("Координатор " + getLocalName() + " создан.");
         System.out.println("Hello! Coordinator Agent " + getAID().getName() + " is ready.");
-        calculatorNames = List.of((String[]) getArguments()[0]);
-        expectedResponses = calculatorNames.size();
+
+        // Добавляем поведение для поиска и обновления вычислителей
+        addBehaviour(new UpdateCalculatorListBehaviour());
+
+        // Добавляем поведение для обработки сообщений
         addBehaviour(new RequestReceiverBehaviour());
+    }
+
+    private class UpdateCalculatorListBehaviour extends CyclicBehaviour {
+        private final long UPDATE_INTERVAL = 10000;
+        private long lastUpdate = System.currentTimeMillis();
+
+        @Override
+        public void action() {
+            if (System.currentTimeMillis() - lastUpdate >= UPDATE_INTERVAL) {
+                updateCalculatorList();
+                lastUpdate = System.currentTimeMillis();
+            } //else {
+//                block();
+//            }
+        }
+
+        private void updateCalculatorList() {
+            try {
+                DFAgentDescription template = new DFAgentDescription();
+                ServiceDescription sdTemplate = new ServiceDescription();
+                sdTemplate.setType("calculator");
+                template.addServices(sdTemplate);
+
+                DFAgentDescription[] results = DFService.search(myAgent, template);
+                Set<String> currentNames = new HashSet<>(calculatorNames);
+                Set<String> newNames = new HashSet<>();
+
+                for (DFAgentDescription desc : results) {
+                    String name = desc.getName().getLocalName();
+                    newNames.add(name);
+                }
+
+                // Удаляем ушедших агентов
+                currentNames.removeAll(newNames);
+                for (String name : currentNames) {
+                    logger.info("Агент-вычислитель " + name + " больше не доступен");
+                }
+
+                // Добавляем новых агентов
+                newNames.removeAll(currentNames);
+                for (String name : newNames) {
+                    logger.info("Новый агент-вычислитель " + name + " найден");
+                }
+
+                calculatorNames = new ArrayList<>(newNames);
+                expectedResponses = calculatorNames.size();
+
+                logger.info("Текущий список вычислителей: " + calculatorNames);
+            } catch (FIPAException e) {
+                logger.severe("Ошибка при поиске вычислителей: " + e.getMessage());
+            }
+        }
     }
 
     private class RequestReceiverBehaviour extends CyclicBehaviour {
@@ -34,9 +94,9 @@ public class Coordinator extends Agent {
                 } else if (msg.getPerformative() == ACLMessage.CONFIRM) {
                     processResponse(msg);
                 }
-            } else {
-                block();
-            }
+            } //else {
+//                block();
+//            }
         }
 
         private void processRequest(ACLMessage request) {
