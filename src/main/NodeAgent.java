@@ -12,17 +12,22 @@ public class NodeAgent extends Agent {
     private Set<String> neighbors = new HashSet<>();
     private Logger logger = Logger.getMyLogger(getClass().getName());
 
+    public NodeAgent() {
+    }
+
     protected void setup() {
+        this.name = getLocalName();
+        //logger.log(Logger.INFO, args.toString());
+        //logger.log(Logger.INFO, "Agent: " + this.name + "\nNeighbours: " + neighbors);
         // Получаем имя и соседей из аргументов
         Object[] args = getArguments();
         if (args.length > 0) {
-            this.name = (String) args[0];
-            for (int i = 1; i < args.length; i++) {
+            for (int i = 0; i < args.length; i++) {
                 neighbors.add((String) args[i]);
             }
         }
 
-        logger.log(Logger.INFO, "Agent " + name + " initialized with neighbors: " + neighbors);
+        logger.log(Logger.INFO, "Agent " + this.name + " initialized with neighbors: " + neighbors);
 
         // Добавляем поведение для обработки запросов
         addBehaviour(new RequestHandler());
@@ -73,6 +78,7 @@ public class NodeAgent extends Agent {
                     visited.add(neighbor);
                     prev.put(neighbor, current);
                     queue.add(neighbor);
+
                 }
             }
         }

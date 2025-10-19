@@ -16,6 +16,11 @@ public class SampleAgent extends Agent {
         addBehaviour(new PrintAgentNameBehaviour());
         System.out.println("Hello! Agent " + getAID().getName() + " is ready.");
         addBehaviour(new MessageReceiverBehaviour());
+        ACLMessage msg = new ACLMessage(ACLMessage.REQUEST);
+        msg.setContent("node3");
+        msg.setProtocol("REQUEST");
+        msg.addReceiver(new jade.core.AID("node1", false));
+        send(msg);
     }
 
     private class PrintAgentNameBehaviour extends OneShotBehaviour {
@@ -31,7 +36,8 @@ public class SampleAgent extends Agent {
             ACLMessage msg = myAgent.receive();
             if (msg != null) {
                 logger.info("Получено сообщение:");
-                logger.info("Тип (коммуникативный акт): " + getPerformativeName(msg.getPerformative()));
+                //logger.info("Тип (коммуникативный акт): " + getPerformativeName(msg.getPerformative()));
+                logger.info("Тип (протокол): " + msg.getProtocol());
                 logger.info("Отправитель: " + msg.getSender().getLocalName());
                 logger.info("Содержание: " + msg.getContent());
             } else {

@@ -7,40 +7,39 @@ import jade.core.ProfileImpl;
 import jade.wrapper.AgentController;
 import jade.wrapper.StaleProxyException;
 import main.CalculatorAgent;
+import main.NodeAgent;
 import main.SampleAgent;
 import main.Coordinator;
 
 
 public class Main {
     public static void main(String[] args) throws StaleProxyException {
-        //TIP Press <shortcut actionId="ShowIntentionActions"/> with your caret at the highlighted text
-        // to see how IntelliJ IDEA suggests fixing it.
-        //System.out.printf("Hello and welcome!");
         Runtime rt = Runtime.instance();
         Profile p = new ProfileImpl();
-        // p.setParameter(Profile.MAIN_HOST, "localhost");
-        // p.setParameter(Profile.MAIN_PORT, "10099");
-        p.setParameter(Profile.GUI, "true");
+        //p.setParameter(Profile.GUI, "true");
         AgentContainer mainContainer = rt.createMainContainer(p);
 
 
+        //String[] nodes = {"node1", "node2", "node3"};
+
+        AgentController node1 = mainContainer.createNewAgent("node1", NodeAgent.class.getName(), new String[]{"node2"});
+        node1.start();
+        AgentController node2 = mainContainer.createNewAgent("node2", NodeAgent.class.getName(), new String[]{"node1", "node3"});
+        node2.start();
+        AgentController node3 = mainContainer.createNewAgent("node3", NodeAgent.class.getName(), new String[]{"node2"});
+        node3.start();
+
         AgentController agent = mainContainer.createNewAgent("sample-agent", SampleAgent.class.getName(), null);
         agent.start();
-
-        /*String[] dummyNames = {"dummy1", "dummy2"};
-        for (String name : dummyNames) {
-            AgentController dummyAgent = mainContainer.createNewAgent(name, SampleAgent.class.getName(), null);
-            dummyAgent.start();
-        }*/
-
-        String[] calculatorNames = {"calc1", "calc2", "calc3"};
-        for (String name : calculatorNames) {
-            AgentController calculator = mainContainer.createNewAgent(name, CalculatorAgent.class.getName(), null);
-            calculator.start();
-        }
-
-        Object[] argsForCoordinator = {calculatorNames};
-        AgentController coordinator = mainContainer.createNewAgent("coordinator", Coordinator.class.getName(), argsForCoordinator);
-        coordinator.start();
+//
+//        String[] calculatorNames = {"calc1", "calc2", "calc3"};
+//        for (String name : calculatorNames) {
+//            AgentController calculator = mainContainer.createNewAgent(name, CalculatorAgent.class.getName(), null);
+//            calculator.start();
+//        }
+//
+//        Object[] argsForCoordinator = {calculatorNames};
+//        AgentController coordinator = mainContainer.createNewAgent("coordinator", Coordinator.class.getName(), argsForCoordinator);
+//        coordinator.start();
     }
 }
