@@ -2,8 +2,6 @@ package main;
 import jade.core.Agent;
 import jade.core.behaviours.CyclicBehaviour;
 import jade.lang.acl.ACLMessage;
-import jade.domain.FIPAAgentManagement.DFAgentDescription;
-import jade.domain.FIPAAgentManagement.ServiceDescription;
 import jade.util.Logger;
 
 import java.util.*;
@@ -12,24 +10,39 @@ public class NodeAgent extends Agent {
     private Set<String> neighbors = new HashSet<>();
     private Logger logger = Logger.getMyLogger(getClass().getName());
 
-    public NodeAgent() {
-    }
+    private static Map<String, Integer> nameToId = new HashMap<>(); // Отображение имени → ID
+    private static int nextId = 0;
+    private static Graph graph;
 
     protected void setup() {
         this.name = getLocalName();
-        //logger.log(Logger.INFO, args.toString());
-        //logger.log(Logger.INFO, "Agent: " + this.name + "\nNeighbours: " + neighbors);
-        // Получаем имя и соседей из аргументов
         Object[] args = getArguments();
         if (args.length > 0) {
             for (int i = 0; i < args.length; i++) {
                 neighbors.add((String) args[i]);
             }
         }
+        // Инициализация графа и отображения
+        if (graph == null) {
+            graph = new Graph(args.length + 1); // Пример: размер графа = количеству аргументов + 1
+        }
 
-        logger.log(Logger.INFO, "Agent " + this.name + " initialized with neighbors: " + neighbors);
+        // Присвоение ID текущему узлу
+        if (!nameToId.containsKey(name)) {
+            nameToId.put(name, nextId++);
+        }
+        int agentId = nameToId.get(name);
 
-        // Добавляем поведение для обработки запросов
+        // Добавление рёбер в граф
+        for (String neighbor : neighbors) {
+            if (!nameToId.containsKey(neighbor)) {
+                nameToId.put(neighbor, nextId++);
+            }
+            int neighborId = nameToId.get(neighbor);
+            graph.addEdge(agentId, neighborId);
+        }
+
+        logger.log(Logger.INFO, "Agent " + name + " initialized with neighbors: " + neighbors);
         addBehaviour(new RequestHandler());
     }
     private class RequestHandler extends CyclicBehaviour {
@@ -58,32 +71,30 @@ public class NodeAgent extends Agent {
     }
 
     private List<String> findPath(String targetName) {
-        // Поиск в ширину (BFS)
-        Queue<String> queue = new LinkedList<>();
-        Map<String, String> prev = new HashMap<>();
-        Set<String> visited = new HashSet<>();
+        int targetId = nameToId.getOrDefault(targetName, -1);
+        if (targetId == -1) {
+            return null;
+        }
 
-        queue.add(name);
-        visited.add(name);
+        int agentId = nameToId.get(name);
+        List<Integer> pathIds = graph.BFS(agentId, targetId);
 
-        while (!queue.isEmpty()) {
-            String current = queue.poll();
+        if (pathIds == null) {
+            return null;
+        }
 
-            if (current.equals(targetName)) {
-                return buildPath(prev, targetName);
-            }
-
-            for (String neighbor : getNeighbors(current)) {
-                if (!visited.contains(neighbor)) {
-                    visited.add(neighbor);
-                    prev.put(neighbor, current);
-                    queue.add(neighbor);
-
+        // Преобразование ID в имена
+        List<String> pathNames = new ArrayList<>();
+        for (Integer id : pathIds) {
+            for (Map.Entry<String, Integer> entry : nameToId.entrySet()) {
+                if (entry.getValue().equals(id)) {
+                    pathNames.add(entry.getKey());
+                    break;
                 }
             }
         }
 
-        return null;
+        return pathNames;
     }
 
     private List<String> buildPath(Map<String, String> prev, String target) {
