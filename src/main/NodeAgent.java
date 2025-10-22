@@ -27,20 +27,16 @@ public class NodeAgent extends Agent {
                 neighbors.add((String) arg);
             }
         }
-
-        // Синхронизированная инициализация графа и отображения
         synchronized (NodeAgent.class) {
             if (graph == null) {
                 graph = new Graph();
             }
 
-            // Присвоение ID текущему узлу
             if (!nameToId.containsKey(name)) {
                 nameToId.put(name, nextId++);
             }
             int agentId = nameToId.get(name);
 
-            // Добавление рёбер в граф
             for (String neighbor : neighbors) {
                 if (!nameToId.containsKey(neighbor)) {
                     nameToId.put(neighbor, nextId++);
@@ -91,7 +87,6 @@ public class NodeAgent extends Agent {
             return null;
         }
 
-        // Преобразование ID в имена
         List<String> pathNames = new ArrayList<>();
         for (Integer id : pathIds) {
             for (Map.Entry<String, Integer> entry : nameToId.entrySet()) {
