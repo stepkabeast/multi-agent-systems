@@ -2,6 +2,8 @@ package main;
 import jade.core.Agent;
 import jade.core.behaviours.CyclicBehaviour;
 import jade.lang.acl.ACLMessage;
+import jade.domain.FIPAAgentManagement.DFAgentDescription;
+import jade.domain.FIPAAgentManagement.ServiceDescription;
 import jade.util.Logger;
 
 import java.util.*;
@@ -14,32 +16,38 @@ public class NodeAgent extends Agent {
     private static int nextId = 0;
     private static Graph graph;
 
+//    public NodeAgent() {
+//    }
+
     protected void setup() {
         this.name = getLocalName();
         Object[] args = getArguments();
-        if (args.length > 0) {
-            for (int i = 0; i < args.length; i++) {
-                neighbors.add((String) args[i]);
+        if (args != null && args.length > 0) {
+            for (Object arg : args) {
+                neighbors.add((String) arg);
             }
         }
-        // Инициализация графа и отображения
-        if (graph == null) {
-            graph = new Graph(args.length + 1); // Пример: размер графа = количеству аргументов + 1
-        }
 
-        // Присвоение ID текущему узлу
-        if (!nameToId.containsKey(name)) {
-            nameToId.put(name, nextId++);
-        }
-        int agentId = nameToId.get(name);
-
-        // Добавление рёбер в граф
-        for (String neighbor : neighbors) {
-            if (!nameToId.containsKey(neighbor)) {
-                nameToId.put(neighbor, nextId++);
+        // Синхронизированная инициализация графа и отображения
+        synchronized (NodeAgent.class) {
+            if (graph == null) {
+                graph = new Graph();
             }
-            int neighborId = nameToId.get(neighbor);
-            graph.addEdge(agentId, neighborId);
+
+            // Присвоение ID текущему узлу
+            if (!nameToId.containsKey(name)) {
+                nameToId.put(name, nextId++);
+            }
+            int agentId = nameToId.get(name);
+
+            // Добавление рёбер в граф
+            for (String neighbor : neighbors) {
+                if (!nameToId.containsKey(neighbor)) {
+                    nameToId.put(neighbor, nextId++);
+                }
+                int neighborId = nameToId.get(neighbor);
+                graph.addEdge(agentId, neighborId);
+            }
         }
 
         logger.log(Logger.INFO, "Agent " + name + " initialized with neighbors: " + neighbors);
