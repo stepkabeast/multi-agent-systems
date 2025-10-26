@@ -1,4 +1,5 @@
 package main;
+import jade.core.AID;
 import jade.core.Agent;
 import jade.lang.acl.ACLMessage;
 import jade.util.Logger;
@@ -13,14 +14,19 @@ public class SampleAgent extends Agent {
     @Override
     protected void setup() {
         logger.info("Агент " + getLocalName() + " создан.");
-        addBehaviour(new PrintAgentNameBehaviour());
+        //addBehaviour(new PrintAgentNameBehaviour());
         System.out.println("Hello! Agent " + getAID().getName() + " is ready.");
         addBehaviour(new MessageReceiverBehaviour());
         ACLMessage msg = new ACLMessage(ACLMessage.REQUEST);
-        msg.setContent("node3");
+        msg.setContent("c");
         msg.setProtocol("REQUEST");
-        msg.addReceiver(new jade.core.AID("node1", false));
+        String name = "a";
+        //msg.addReceiver(new jade.core.AID("a@192.168.0.60:1099/JADE", false));
+        AID id = new AID(name, AID.ISLOCALNAME);
+        logger.info("ID: " + id.getName());
+        msg.addReceiver(new AID(id.getName()));
         send(msg);
+        logger.info("Сообщение: " + msg.getContent() + " отправлено.");
     }
 
     private class PrintAgentNameBehaviour extends OneShotBehaviour {
