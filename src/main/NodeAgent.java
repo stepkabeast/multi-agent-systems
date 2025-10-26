@@ -1,9 +1,11 @@
 package main;
+
 import jade.core.AID;
 import jade.core.Agent;
 import jade.core.behaviours.CyclicBehaviour;
 import jade.lang.acl.ACLMessage;
 import jade.util.Logger;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
@@ -11,10 +13,9 @@ import java.util.Objects;
 
 public class NodeAgent extends Agent {
     private List<String> neighbors = new ArrayList<>();
-    Object[] args = getArguments();
-    protected String content = "";
     Logger logger = Logger.getMyLogger(getClass().getName());
     String name = "";
+    String responser = "";
 
     @Override
     public void setup() {
@@ -37,36 +38,43 @@ public class NodeAgent extends Agent {
     private class NodeBehaviour extends CyclicBehaviour {
         @Override
         public void action() {
-        /*
-           Агент должен ожидать и принимать сообщение от других агентов,
-           проверить контекст сообщения и если оно совпадает с именем его соседа,
-           то отправить сообщение о том, что это его сосед, иначе сообщить об обратном.
-         */
             ACLMessage msg = receive();
             if (msg != null) {
-                String receivedContent = msg.getContent();
-                boolean isNeighbor = neighbors.contains(receivedContent);
-                if (isNeighbor) {
-                    ACLMessage response = msg.createReply();
-                    response.addReceiver(msg.getSender());
-                    String route =  name + " " + msg.getContent();
-                    response.setContent(route);
-                    send(response);
-                    logger.log(Logger.INFO, "Route is: " + route);
-                } else {
-                    for (String neighbor : neighbors) {
-                        sendMessage(receivedContent, neighbor);
+                    String receivedContent = msg.getContent();
+                    if (name.equals(receivedContent)) {
+                        ACLMessage response = msg.createReply();
+                        response.setPerformative(4);
+                        response.setContent(msg.getSender().getLocalName() + "\n"+name);
+                        send(response);
                     }
-;                }
+                    else {
+                        for (String neighbor : neighbors) {
+                            if (!neighbor.equals(msg.getSender().getLocalName())) {
+                                ACLMessage newMsg = new ACLMessage(ACLMessage.REQUEST);
+                                newMsg.setContent(receivedContent);
+                                newMsg.addReceiver(new AID(neighbor, AID.ISLOCALNAME));
+                                send(newMsg);
+                            }
+                        }
+                    }
+            }
+            else {
+                block();
             }
         }
-
-        public void sendMessage(String message, String receiver) {
-            ACLMessage msg = new ACLMessage(ACLMessage.REQUEST);
-            msg.setContent(message);
-            msg.addReceiver(new AID(receiver, AID.ISLOCALNAME));
-            send(msg);
+        private String getPerformativeName(int performative) {
+            return switch (performative) {
+                case ACLMessage.INFORM -> "INFORM";
+                case ACLMessage.REQUEST -> "REQUEST";
+                case ACLMessage.CONFIRM -> "CONFIRM";
+                case ACLMessage.QUERY_REF -> "QUERY_REF";
+                case ACLMessage.AGREE -> "AGREE";
+                case ACLMessage.CANCEL -> "CANCEL";
+                case ACLMessage.FAILURE -> "FAILURE";
+                case ACLMessage.REFUSE -> "REFUSE";
+                case ACLMessage.PROPOSE -> "PROPOSE";
+                default -> "UNKNOWN(" + performative + ")";
+            };
         }
-
     }
 }

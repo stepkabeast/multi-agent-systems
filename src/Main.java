@@ -21,9 +21,9 @@
             node1.start();
             AgentController node2 = container.createNewAgent("b", NodeAgent.class.getName(), new Object[]{"a", "c"});
             node2.start();
-            AgentController node3 = container.createNewAgent("c", NodeAgent.class.getName(), new Object[]{"b"});
+            AgentController node3 = container.createNewAgent("c", NodeAgent.class.getName(), new Object[]{"b","d"});
             node3.start();
-            AgentController sender = container.createNewAgent("sender", SampleAgent.class.getName(), null);
-            sender.start();
+            AgentController node4 = container.createNewAgent("d", NodeAgent.class.getName(), new Object[]{"c"});
+            node4.start();
         }
     }
