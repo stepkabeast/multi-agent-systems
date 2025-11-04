@@ -38,11 +38,12 @@ public class NodeAgent extends Agent {
         public void action() {
             ACLMessage msg = receive();
             if (msg != null) {
-                if (msg.getPerformative() == ACLMessage.REQUEST){
-                    String target = msg.getContent();
-                    String sender = msg.getSender().getLocalName();
+                String target = msg.getContent();
+                String sender = msg.getSender().getLocalName();
+                ACLMessage reply = msg.createReply();
 
-                    ACLMessage reply = msg.createReply();
+                if (msg.getPerformative() == ACLMessage.REQUEST) {
+
                     if (neighbors.contains(target)) {
                         reply.setPerformative(ACLMessage.CONFIRM);
                         reply.setContent(target + name);
@@ -50,10 +51,8 @@ public class NodeAgent extends Agent {
                         reply.setPerformative(ACLMessage.DISCONFIRM);
                         reply.setContent("No path");
                     }
-
                     send(reply);
                     logger.log(Logger.INFO, reply.getContent());
-
                     if (reply.getPerformative() == ACLMessage.DISCONFIRM) {
                         ACLMessage forwardMsg = new ACLMessage(ACLMessage.REQUEST);
                         forwardMsg.setContent(target);
@@ -66,7 +65,13 @@ public class NodeAgent extends Agent {
                         }
                     }
                 }
-            } else {
+                else if (msg.getPerformative() == ACLMessage.CONFIRM) {
+                    reply.setPerformative(ACLMessage.CONFIRM);
+                    reply.setContent(target + name);
+                    send(reply);
+                }
+            }
+            else {
                 block();
             }
         }
