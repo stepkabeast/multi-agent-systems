@@ -13,7 +13,7 @@ import java.util.Map;
 
 public class NodeAgent extends Agent {
     private List<String> neighbors = new ArrayList<>();
-    private Map<String, String> requestSenders = new HashMap<>(); // Храним отправителей запросов
+    private Map<String, String> requestSenders = new HashMap<>();
     Logger logger = Logger.getMyLogger(getClass().getName());
     String name = "";
 
@@ -50,7 +50,7 @@ public class NodeAgent extends Agent {
 
                     if (neighbors.contains(target)) {
                         reply.setPerformative(ACLMessage.CONFIRM);
-                        reply.setContent(target + ":" + name);
+                        reply.setContent(target + "\n" + name);
                     } else {
                         reply.setPerformative(ACLMessage.DISCONFIRM);
                         reply.setContent("No path");
@@ -67,10 +67,10 @@ public class NodeAgent extends Agent {
                     send(reply);
                 }
                 else if (msg.getPerformative() == ACLMessage.CONFIRM) {
-                    String[] parts = content.split(":");
+                    String[] parts = content.split("\n");
                     if (parts.length >= 2) {
                         String originalTarget = parts[0];
-                        String path = parts[1];
+                        String path = String.join("\n", java.util.Arrays.copyOfRange(parts, 1, parts.length));
 
                         if (requestSenders.containsKey(originalTarget) &&
                                 requestSenders.get(originalTarget).equals(name)) {
@@ -79,7 +79,7 @@ public class NodeAgent extends Agent {
                             String previousSender = requestSenders.get(originalTarget);
                             if (previousSender != null) {
                                 ACLMessage forwardConfirm = new ACLMessage(ACLMessage.CONFIRM);
-                                forwardConfirm.setContent(originalTarget + ":" + path + "->" + name);
+                                forwardConfirm.setContent(originalTarget + "\n" + path + "\n" + name);
                                 forwardConfirm.addReceiver(new AID(previousSender, AID.ISLOCALNAME));
                                 send(forwardConfirm);
                             }
