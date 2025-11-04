@@ -7,11 +7,13 @@ import jade.lang.acl.ACLMessage;
 import jade.util.Logger;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
-import java.util.Objects;
+import java.util.Map;
 
 public class NodeAgent extends Agent {
     private List<String> neighbors = new ArrayList<>();
+    private Map<String, String> requestSenders = new HashMap<>(); // Храним отправителей запросов
     Logger logger = Logger.getMyLogger(getClass().getName());
     String name = "";
 
@@ -38,40 +40,53 @@ public class NodeAgent extends Agent {
         public void action() {
             ACLMessage msg = receive();
             if (msg != null) {
-                String target = msg.getContent();
+                String content = msg.getContent();
                 String sender = msg.getSender().getLocalName();
                 ACLMessage reply = msg.createReply();
 
                 if (msg.getPerformative() == ACLMessage.REQUEST) {
+                    String target = content;
+                    requestSenders.put(target, sender);
 
                     if (neighbors.contains(target)) {
                         reply.setPerformative(ACLMessage.CONFIRM);
-                        reply.setContent(target + name);
+                        reply.setContent(target + ":" + name);
                     } else {
                         reply.setPerformative(ACLMessage.DISCONFIRM);
                         reply.setContent("No path");
-                    }
-                    send(reply);
-                    logger.log(Logger.INFO, reply.getContent());
-                    if (reply.getPerformative() == ACLMessage.DISCONFIRM) {
+
                         ACLMessage forwardMsg = new ACLMessage(ACLMessage.REQUEST);
                         forwardMsg.setContent(target);
-
                         for (String neighbor : neighbors) {
                             if (!neighbor.equals(sender)) {
                                 forwardMsg.addReceiver(new AID(neighbor, AID.ISLOCALNAME));
-                                send(forwardMsg);
+                            }
+                        }
+                        send(forwardMsg);
+                    }
+                    send(reply);
+                }
+                else if (msg.getPerformative() == ACLMessage.CONFIRM) {
+                    String[] parts = content.split(":");
+                    if (parts.length >= 2) {
+                        String originalTarget = parts[0];
+                        String path = parts[1];
+
+                        if (requestSenders.containsKey(originalTarget) &&
+                                requestSenders.get(originalTarget).equals(name)) {
+                            logger.log(Logger.INFO, "Path to " + originalTarget + ": " + path);
+                        } else {
+                            String previousSender = requestSenders.get(originalTarget);
+                            if (previousSender != null) {
+                                ACLMessage forwardConfirm = new ACLMessage(ACLMessage.CONFIRM);
+                                forwardConfirm.setContent(originalTarget + ":" + path + "->" + name);
+                                forwardConfirm.addReceiver(new AID(previousSender, AID.ISLOCALNAME));
+                                send(forwardConfirm);
                             }
                         }
                     }
                 }
-                else if (msg.getPerformative() == ACLMessage.CONFIRM) {
-                    reply.setPerformative(ACLMessage.CONFIRM);
-                    reply.setContent(name+msg.getContent());
-                    send(reply);
-                }
-            }
-            else {
+            } else {
                 block();
             }
         }
