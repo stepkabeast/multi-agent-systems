@@ -67,7 +67,7 @@ public class NodeAgent extends Agent {
                 }
                 else if (msg.getPerformative() == ACLMessage.CONFIRM) {
                     reply.setPerformative(ACLMessage.CONFIRM);
-                    reply.setContent(target + name);
+                    reply.setContent(name+msg.getContent());
                     send(reply);
                 }
             }

@@ -25,10 +25,9 @@
             node3.start();
             AgentController node4 = container.createNewAgent("d", NodeAgent.class.getName(), new Object[]{"c"});
             node4.start();
-            //паузу 2 секунды
-            Thread.sleep(2000);
 
-            AgentController sampleAgent = container.createNewAgent("sampleAgent", SampleAgent.class.getName(), new Object[]{});
-            sampleAgent.start();
+
+//            AgentController sampleAgent = container.createNewAgent("sampleAgent", SampleAgent.class.getName(), new Object[]{});
+//            sampleAgent.start();
         }
     }
