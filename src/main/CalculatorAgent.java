@@ -1,9 +1,9 @@
 package main;
 
 import jade.core.Agent;
+import jade.core.behaviours.CyclicBehaviour;
 import jade.lang.acl.ACLMessage;
 import jade.util.Logger;
-import jade.core.behaviours.CyclicBehaviour;
 import jade.domain.DFService;
 import jade.domain.FIPAException;
 import jade.domain.FIPAAgentManagement.DFAgentDescription;
@@ -31,60 +31,52 @@ public class CalculatorAgent extends Agent {
             logger.severe("Ошибка регистрации в DF: " + e.getMessage());
         }
 
-        addBehaviour(new RequestReceiverBehaviour());
+        // Добавляем поведение
+        addBehaviour(new RequestHandler());
     }
 
-    private class RequestReceiverBehaviour extends CyclicBehaviour {
+    private class RequestHandler extends CyclicBehaviour {
         @Override
         public void action() {
             ACLMessage msg = myAgent.receive();
-            if (msg != null) {
-                if (msg.getPerformative() == ACLMessage.REQUEST) {
-                    processRequest(msg);
+            if (msg != null && msg.getPerformative() == ACLMessage.REQUEST) {
+                logger.info("📥 Получен запрос: " + msg.getContent());
+
+                try {
+                    String[] parts = msg.getContent().split(",");
+                    int start = Integer.parseInt(parts[0].trim());
+                    int end = Integer.parseInt(parts[1].trim());
+
+                    int sum = 0;
+                    for (int i = Math.min(start, end); i <= Math.max(start, end); i++) {
+                        sum += i;
+                    }
+
+                    ACLMessage reply = msg.createReply();
+                    reply.setPerformative(ACLMessage.CONFIRM);
+                    reply.setContent(String.valueOf(sum));
+                    send(reply);
+
+                    logger.info("📤 Ответ отправлен: " + sum);
+                } catch (Exception e) {
+                    ACLMessage reply = msg.createReply();
+                    reply.setPerformative(ACLMessage.FAILURE);
+                    reply.setContent("Ошибка: " + e.getMessage());
+                    send(reply);
+                    logger.warning("❌ Ошибка обработки: " + e.getMessage());
                 }
             } else {
                 block();
             }
         }
+    }
 
-        private void processRequest(ACLMessage request) {
-            logger.info("Получен REQUEST: " + request.getContent());
-
-            try {
-                String[] parts = request.getContent().split(",");
-                int start = Integer.parseInt(parts[0].trim());
-                int end = Integer.parseInt(parts[1].trim());
-
-                int sum = calculateSum(start, end);
-
-                ACLMessage confirm = request.createReply();
-                confirm.setPerformative(ACLMessage.CONFIRM);
-                confirm.setContent(String.valueOf(sum));
-                send(confirm);
-
-                logger.info("Отправлен CONFIRM с суммой: " + sum);
-            } catch (Exception e) {
-                logger.severe("Ошибка при обработке запроса: " + e.getMessage());
-
-                ACLMessage failure = request.createReply();
-                failure.setPerformative(ACLMessage.FAILURE);
-                failure.setContent("Ошибка: " + e.getMessage());
-                send(failure);
-            }
-        }
-
-        private int calculateSum(int start, int end) {
-            if (start > end) {
-                int temp = start;
-                start = end;
-                end = temp;
-            }
-
-            int sum = 0;
-            for (int i = start; i <= end; i++) {
-                sum += i;
-            }
-            return sum;
+    @Override
+    protected void takeDown() {
+        try {
+            DFService.deregister(this);
+        } catch (FIPAException e) {
+            logger.severe("Ошибка при выходе: " + e.getMessage());
         }
     }
 }

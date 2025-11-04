@@ -1,170 +1,179 @@
 package main;
 
 import jade.core.Agent;
+import jade.core.behaviours.Behaviour;
+import jade.core.behaviours.TickerBehaviour;
 import jade.lang.acl.ACLMessage;
+import jade.lang.acl.MessageTemplate;
 import jade.util.Logger;
-import jade.core.behaviours.CyclicBehaviour;
 import jade.domain.DFService;
 import jade.domain.FIPAException;
 import jade.domain.FIPAAgentManagement.DFAgentDescription;
 import jade.domain.FIPAAgentManagement.ServiceDescription;
-import jade.domain.FIPAAgentManagement.SearchConstraints;
 import java.util.*;
 
 public class Coordinator extends Agent {
     private Logger logger = Logger.getMyLogger(getClass().getName());
     private List<String> calculatorNames = new ArrayList<>();
-    private Map<String, Integer> responses = new HashMap<>();
-    private int expectedResponses;
-    private int totalSum = 0;
-    private ACLMessage originalRequest;
+    private boolean isProcessing = false;
 
     @Override
     protected void setup() {
         logger.info("Координатор " + getLocalName() + " создан.");
         System.out.println("Hello! Coordinator Agent " + getAID().getName() + " is ready.");
 
-        // Добавляем поведение для поиска и обновления вычислителей
         addBehaviour(new UpdateCalculatorListBehaviour());
-
-        // Добавляем поведение для обработки сообщений
-        addBehaviour(new RequestReceiverBehaviour());
+        addBehaviour(new MainBehaviour());
     }
 
-    private class UpdateCalculatorListBehaviour extends CyclicBehaviour {
-        private final long UPDATE_INTERVAL = 10000;
-        private long lastUpdate = System.currentTimeMillis();
+    private class MainBehaviour extends Behaviour {
+        private final MessageTemplate requestTemplate = MessageTemplate.MatchPerformative(ACLMessage.REQUEST);
+        private final MessageTemplate confirmTemplate = MessageTemplate.MatchPerformative(ACLMessage.CONFIRM);
 
         @Override
         public void action() {
-            if (System.currentTimeMillis() - lastUpdate >= UPDATE_INTERVAL) {
-                updateCalculatorList();
-                lastUpdate = System.currentTimeMillis();
-            } //else {
-//                block();
-//            }
-        }
-
-        private void updateCalculatorList() {
-            try {
-                DFAgentDescription template = new DFAgentDescription();
-                ServiceDescription sdTemplate = new ServiceDescription();
-                sdTemplate.setType("calculator");
-                template.addServices(sdTemplate);
-
-                DFAgentDescription[] results = DFService.search(myAgent, template);
-                Set<String> currentNames = new HashSet<>(calculatorNames);
-                Set<String> newNames = new HashSet<>();
-
-                for (DFAgentDescription desc : results) {
-                    String name = desc.getName().getLocalName();
-                    newNames.add(name);
-                }
-
-                // Удаляем ушедших агентов
-                currentNames.removeAll(newNames);
-                for (String name : currentNames) {
-                    logger.info("Агент-вычислитель " + name + " больше не доступен");
-                }
-
-                // Добавляем новых агентов
-                newNames.removeAll(currentNames);
-                for (String name : newNames) {
-                    logger.info("Новый агент-вычислитель " + name + " найден");
-                }
-
-                calculatorNames = new ArrayList<>(newNames);
-                expectedResponses = calculatorNames.size();
-
-                logger.info("Текущий список вычислителей: " + calculatorNames);
-            } catch (FIPAException e) {
-                logger.severe("Ошибка при поиске вычислителей: " + e.getMessage());
-            }
-        }
-    }
-
-    private class RequestReceiverBehaviour extends CyclicBehaviour {
-        @Override
-        public void action() {
-            ACLMessage msg = myAgent.receive();
+            ACLMessage msg = myAgent.receive(requestTemplate);
             if (msg != null) {
-                if (msg.getPerformative() == ACLMessage.REQUEST) {
-                    originalRequest = msg;
-                    processRequest(msg);
-                } else if (msg.getPerformative() == ACLMessage.CONFIRM) {
-                    processResponse(msg);
+                logger.info("📥 Получен запрос от " + msg.getSender().getLocalName() +
+                        ": \"" + msg.getContent() + "\"");
+
+                if (isProcessing) {
+                    ACLMessage refuse = msg.createReply();
+                    refuse.setPerformative(ACLMessage.REFUSE);
+                    refuse.setContent("Coordinator is busy");
+                    send(refuse);
+                    logger.info("❌ Запрос отклонён: координатор занят");
+                    return;
                 }
-            } //else {
-//                block();
-//            }
-        }
 
-        private void processRequest(ACLMessage request) {
-            logger.info("Получен REQUEST: " + request.getContent());
+                logger.info("✅ Начинаем обработку запроса");
+                isProcessing = true;
 
-            try {
-                String[] parts = request.getContent().split(",");
-                int start = Integer.parseInt(parts[0].trim());
-                int end = Integer.parseInt(parts[1].trim());
+                try {
+                    String[] parts = msg.getContent().split(",");
+                    int start = Integer.parseInt(parts[0].trim());
+                    int end = Integer.parseInt(parts[1].trim());
 
-                int rangeSize = end - start + 1;
-                int chunkSize = rangeSize / calculatorNames.size();
-                int remainder = rangeSize % calculatorNames.size();
+                    logger.info("🔢 Диапазон: " + start + " - " + end);
 
-                int currentStart = start;
-                for (String calculatorName : calculatorNames) {
-                    int currentEnd = currentStart + chunkSize - 1;
-                    if (remainder > 0) {
-                        currentEnd++;
-                        remainder--;
+                    int rangeSize = end - start + 1;
+                    int numAgents = calculatorNames.size();
+
+                    if (numAgents == 0) {
+                        ACLMessage failure = msg.createReply();
+                        failure.setPerformative(ACLMessage.FAILURE);
+                        failure.setContent("Нет доступных вычислителей");
+                        send(failure);
+                        logger.severe("❌ Ошибка: нет доступных вычислителей");
+                        isProcessing = false;
+                        return;
                     }
 
-                    ACLMessage message = new ACLMessage(ACLMessage.REQUEST);
-                    message.addReceiver(getAID(calculatorName));
-                    message.setLanguage("sum");
-                    message.setContent(currentStart + ", " + currentEnd);
-                    send(message);
+                    logger.info("👥 Найдено вычислителей: " + numAgents);
 
-                    logger.info("Отправлен REQUEST к " + calculatorName + ": " +
-                            currentStart + " до " + currentEnd);
+                    int chunkSize = rangeSize / numAgents;
+                    int remainder = rangeSize % numAgents;
 
-                    currentStart = currentEnd + 1;
+                    int currentStart = start;
+                    List<String> assigned = new ArrayList<>();
+
+                    for (String name : calculatorNames) {
+                        int currentEnd = currentStart + chunkSize - 1;
+                        if (remainder > 0) {
+                            currentEnd++;
+                            remainder--;
+                        }
+
+                        ACLMessage task = new ACLMessage(ACLMessage.REQUEST);
+                        task.addReceiver(getAID(name));
+                        task.setContent(currentStart + ", " + currentEnd);
+                        send(task);
+
+                        String assignment = name + ": " + currentStart + " → " + currentEnd;
+                        assigned.add(assignment);
+                        logger.info("📤 Задача отправлена: " + assignment);
+
+                        currentStart = currentEnd + 1;
+                    }
+
+                    logger.info("⏳ Ожидание ответов от " + numAgents + " вычислителей...");
+
+                    int totalSum = 0;
+                    int received = 0;
+
+                    for (int i = 0; i < numAgents; i++) {
+                        ACLMessage reply = myAgent.blockingReceive(confirmTemplate, 5000);
+                        if (reply != null) {
+                            try {
+                                int sum = Integer.parseInt(reply.getContent());
+                                totalSum += sum;
+                                received++;
+                                logger.info("✅ Получен ответ от " + reply.getSender().getLocalName() +
+                                        ": " + sum + " (накоплено: " + totalSum + ")");
+                            } catch (Exception e) {
+                                logger.warning("⚠️ Ошибка парсинга ответа от " +
+                                        reply.getSender().getLocalName() + ": " + e.getMessage());
+                            }
+                        } else {
+                            logger.warning("❌ Таймаут ожидания ответа от одного из вычислителей");
+                        }
+                    }
+
+                    logger.info("📊 Всего получено ответов: " + received + " из " + numAgents);
+
+                    ACLMessage result = msg.createReply();
+                    result.setPerformative(ACLMessage.INFORM);
+                    result.setContent("Итоговая сумма: " + totalSum);
+                    send(result);
+                    logger.info("📤 Итог отправлен клиенту: " + totalSum);
+
+                } catch (Exception e) {
+                    logger.severe("❌ Ошибка при обработке: " + e.getMessage());
+                    ACLMessage failure = msg.createReply();
+                    failure.setPerformative(ACLMessage.FAILURE);
+                    failure.setContent("Ошибка: " + e.getMessage());
+                    send(failure);
+                } finally {
+                    isProcessing = false;
+                    logger.info("🔄 Координатор освобождён. Готов к новым запросам.");
                 }
-            } catch (Exception e) {
-                logger.severe("Ошибка при разбиении задачи: " + e.getMessage());
-
-                ACLMessage failure = request.createReply();
-                failure.setPerformative(ACLMessage.FAILURE);
-                failure.setContent("Ошибка: " + e.getMessage());
-                send(failure);
+            } else {
+                block();
             }
         }
 
-        private void processResponse(ACLMessage response) {
-            logger.info("Получен ответ от " + response.getSender().getLocalName());
-            String senderName = response.getSender().getLocalName();
-
-            try {
-                int sum = Integer.parseInt(response.getContent());
-                responses.put(senderName, sum);
-                totalSum += sum;
-                logger.info("Сумма от " + senderName + ": " + sum);
-
-                if (responses.size() == expectedResponses) {
-                    sendFinalResult(originalRequest);
-                }
-            } catch (NumberFormatException e) {
-                logger.warning("Некорректный формат ответа от " + senderName);
-            }
+        @Override
+        public boolean done() {
+            return false;
         }
     }
 
-    private void sendFinalResult(ACLMessage originalRequest) {
-        ACLMessage inform = originalRequest.createReply();
-        inform.setPerformative(ACLMessage.INFORM);
-        inform.setContent("Итоговая сумма: " + totalSum);
-        send(inform);
+    private class UpdateCalculatorListBehaviour extends TickerBehaviour {
+        public UpdateCalculatorListBehaviour() {
+            super(Coordinator.this, 2000);
+        }
 
-        logger.info("Отправлен итог: " + totalSum);
+        @Override
+        protected void onTick() {
+            try {
+                DFAgentDescription template = new DFAgentDescription();
+                ServiceDescription sd = new ServiceDescription();
+                sd.setType("calculator");
+                template.addServices(sd);
+
+                DFAgentDescription[] agents = DFService.search(myAgent, template);
+                List<String> newNames = new ArrayList<>();
+                for (DFAgentDescription a : agents) {
+                    newNames.add(a.getName().getLocalName());
+                }
+
+                if (!newNames.equals(calculatorNames)) {
+                    logger.info("🔄 Обновлён список вычислителей: " + newNames);
+                    calculatorNames = newNames;
+                }
+            } catch (FIPAException e) {
+                logger.severe("❌ Ошибка поиска вычислителей: " + e.getMessage());
+            }
+        }
     }
 }

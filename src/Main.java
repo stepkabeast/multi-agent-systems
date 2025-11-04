@@ -1,33 +1,52 @@
-    import jade.core.AID;
-    import jade.core.Runtime;
-    import jade.lang.acl.ACLMessage;
-    import jade.wrapper.AgentContainer;
-    import jade.core.Profile;
-    import jade.core.ProfileImpl;
-    import jade.wrapper.AgentController;
-    import jade.wrapper.ControllerException;
-    import main.NodeAgent;
-    import main.SampleAgent;
+import jade.core.Runtime;
+import jade.core.Profile;
+import jade.core.ProfileImpl;
+import jade.wrapper.AgentContainer;
+import jade.wrapper.AgentController;
+import jade.wrapper.ControllerException;
+import main.CalculatorAgent;
+import main.Coordinator;
+import main.ClientAgent;
 
-    public class Main {
-        public static void main(String[] args) throws ControllerException, InterruptedException {
-            Runtime rt = Runtime.instance();
-            Profile p = new ProfileImpl();
-            p.setParameter(Profile.GUI, "true");
-            AgentContainer container = rt.createMainContainer(p);
-            container.start();
+public class Main {
+    public static void main(String[] args) throws ControllerException, InterruptedException {
+        Runtime rt = Runtime.instance();
 
-            AgentController node1 = container.createNewAgent("a", NodeAgent.class.getName(), new Object[]{"b"});
-            node1.start();
-            AgentController node2 = container.createNewAgent("b", NodeAgent.class.getName(), new Object[]{"a", "c"});
-            node2.start();
-            AgentController node3 = container.createNewAgent("c", NodeAgent.class.getName(), new Object[]{"b","d"});
-            node3.start();
-            AgentController node4 = container.createNewAgent("d", NodeAgent.class.getName(), new Object[]{"c"});
-            node4.start();
+        Profile p = new ProfileImpl();
+        p.setParameter(Profile.MAIN_PORT, "1199");
+        //p.setParameter(Profile.GUI, "true");
 
-
-//            AgentController sampleAgent = container.createNewAgent("sampleAgent", SampleAgent.class.getName(), new Object[]{});
-//            sampleAgent.start();
+        AgentContainer container = rt.createMainContainer(p);
+        if (container == null) {
+            System.err.println("Ошибка: не удалось создать контейнер.");
+            return;
         }
+
+        container.start();
+
+        AgentController coordinator = container.createNewAgent("coordinator", Coordinator.class.getName(), new Object[]{});
+        AgentController calc1 = container.createNewAgent("calc1", CalculatorAgent.class.getName(), new Object[]{});
+        AgentController calc2 = container.createNewAgent("calc2", CalculatorAgent.class.getName(), new Object[]{});
+        AgentController calc3 = container.createNewAgent("calc3", CalculatorAgent.class.getName(), new Object[]{});
+
+        coordinator.start();
+        calc1.start();
+        calc2.start();
+        calc3.start();
+
+        Thread.sleep(3000);
+
+        sendRequest(container, "coordinator", "1, 100", "client1");
+        Thread.sleep(1000);
+        sendRequest(container, "coordinator", "1, 50", "client2");
+
+        Thread.sleep(10000);
+        System.exit(0);
     }
+
+    private static void sendRequest(AgentContainer container, String receiver, String content, String clientName) throws ControllerException {
+        Object[] args = {receiver, content};
+        AgentController client = container.createNewAgent(clientName, ClientAgent.class.getName(), args);
+        client.start();
+    }
+}
