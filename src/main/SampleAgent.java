@@ -18,21 +18,16 @@ public class SampleAgent extends Agent {
         System.out.println("Hello! Agent " + getAID().getName() + " is ready.");
         addBehaviour(new MessageReceiverBehaviour());
         ACLMessage msg = new ACLMessage(ACLMessage.REQUEST);
-        msg.setContent("c");
-        msg.setProtocol("REQUEST");
-        String name = "a";
-        //msg.addReceiver(new jade.core.AID("a@192.168.0.60:1099/JADE", false));
-        AID id = new AID(name, AID.ISLOCALNAME);
-        logger.info("ID: " + id.getName());
-        msg.addReceiver(new AID(id.getName()));
+        msg.setContent("d");
+        msg.addReceiver(new AID("a"));
         send(msg);
-        logger.info("Сообщение: " + msg.getContent() + " отправлено.");
+        logger.info("Сообщение: " + msg.getContent());
     }
 
     private class PrintAgentNameBehaviour extends OneShotBehaviour {
         @Override
         public void action() {
-            logger.info("Это поведение агента: " + myAgent.getLocalName());
+            //logger.info("Это поведение агента: " + myAgent.getLocalName());
         }
     }
 
@@ -41,11 +36,11 @@ public class SampleAgent extends Agent {
         public void action() {
             ACLMessage msg = myAgent.receive();
             if (msg != null) {
-                logger.info("Получено сообщение:");
-                //logger.info("Тип (коммуникативный акт): " + getPerformativeName(msg.getPerformative()));
-                logger.info("Тип (протокол): " + msg.getProtocol());
-                logger.info("Отправитель: " + msg.getSender().getLocalName());
-                logger.info("Содержание: " + msg.getContent());
+//                logger.info("Получено сообщение:");
+//                logger.info("Тип (коммуникативный акт): " + getPerformativeName(msg.getPerformative()));
+//                logger.info("Тип (протокол): " + msg.getProtocol());
+//                logger.info("Отправитель: " + msg.getSender().getLocalName());
+//                logger.info("Содержание: " + msg.getContent());
             } else {
                 block();
             }
