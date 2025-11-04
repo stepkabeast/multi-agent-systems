@@ -17,7 +17,6 @@ public class CalculatorAgent extends Agent {
         logger.info("Агент-вычислитель " + getLocalName() + " создан.");
         System.out.println("Hello! Calculator Agent " + getAID().getName() + " is ready.");
 
-        // Регистрация в DF
         DFAgentDescription dfd = new DFAgentDescription();
         dfd.setName(getAID());
         ServiceDescription sd = new ServiceDescription();
@@ -28,24 +27,39 @@ public class CalculatorAgent extends Agent {
         try {
             DFService.register(this, dfd);
         } catch (FIPAException e) {
-            logger.severe("Ошибка регистрации в DF: " + e.getMessage());
+            logger.severe("❌ Ошибка регистрации в DF: " + e.getMessage());
         }
 
-        // Добавляем поведение
         addBehaviour(new RequestHandler());
     }
 
     private class RequestHandler extends CyclicBehaviour {
+        private boolean isBusy = false;
+
         @Override
         public void action() {
             ACLMessage msg = myAgent.receive();
             if (msg != null && msg.getPerformative() == ACLMessage.REQUEST) {
                 logger.info("📥 Получен запрос: " + msg.getContent());
 
+                if (isBusy) {
+                    ACLMessage refuse = msg.createReply();
+                    refuse.setPerformative(ACLMessage.REFUSE);
+                    refuse.setContent("Calculator is busy");
+                    send(refuse);
+                    logger.info("❌ Отклонён: агент занят");
+                    return;
+                }
+
+                isBusy = true;
+                logger.info("⏳ " + getLocalName() + " начал вычисление... (имитация загрузки)");
+
                 try {
                     String[] parts = msg.getContent().split(",");
                     int start = Integer.parseInt(parts[0].trim());
                     int end = Integer.parseInt(parts[1].trim());
+
+                    Thread.sleep(5000);
 
                     int sum = 0;
                     for (int i = Math.min(start, end); i <= Math.max(start, end); i++) {
@@ -64,6 +78,8 @@ public class CalculatorAgent extends Agent {
                     reply.setContent("Ошибка: " + e.getMessage());
                     send(reply);
                     logger.warning("❌ Ошибка обработки: " + e.getMessage());
+                } finally {
+                    isBusy = false;
                 }
             } else {
                 block();
@@ -76,7 +92,7 @@ public class CalculatorAgent extends Agent {
         try {
             DFService.deregister(this);
         } catch (FIPAException e) {
-            logger.severe("Ошибка при выходе: " + e.getMessage());
+            logger.severe("❌ Ошибка при выходе: " + e.getMessage());
         }
     }
 }

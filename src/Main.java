@@ -14,7 +14,6 @@ public class Main {
 
         Profile p = new ProfileImpl();
         p.setParameter(Profile.MAIN_PORT, "1199");
-        //p.setParameter(Profile.GUI, "true");
 
         AgentContainer container = rt.createMainContainer(p);
         if (container == null) {
@@ -34,13 +33,13 @@ public class Main {
         calc2.start();
         calc3.start();
 
-        Thread.sleep(3000);
+        Thread.sleep(5000);
 
         sendRequest(container, "coordinator", "1, 100", "client1");
-        Thread.sleep(1000);
+        Thread.sleep(100);
         sendRequest(container, "coordinator", "1, 50", "client2");
 
-        Thread.sleep(10000);
+        Thread.sleep(15000);
         System.exit(0);
     }
 
