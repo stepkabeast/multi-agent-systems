@@ -55,15 +55,79 @@ template.addServices(sdTemplate);
           `🚫 Запрос отклонён: Coordinator is busy`  
           `🚫 Запрос отклонён: Calculator is busy`
 
-5. **Система не обрабатывает несколько запросов одновременно**
-    - Нет параллельных вычислений.
-    - Новые запросы не накапливаются и не теряются — отклоняются.
 
-## Вывод
-Все условия выполнены:
-- Машины состояний реализованы.
-- Отказ при занятости работает.
-- Поведение подтверждено в логах.
-     
+### Задача 1г (ветка practice_04_ex_1_g)
+
+* Вычисления в отдельных потоках
+
+Вывод из логов
+```
+calc1 начал вычисление в отдельном потоке...
+calc2 начал вычисление в отдельном потоке...  
+calc3 начал вычисление в отдельном потоке...
+``` 
+```java
+private class CalculationTask implements Runnable {
+    @Override
+    public void run() {
+        try {
+            ...
+            String[] parts = request.getContent().split(",");
+            int start = Integer.parseInt(parts[0].trim());
+            int end = Integer.parseInt(parts[1].trim());
+            
+            ...
+            
+            ACLMessage reply = request.createReply();
+            reply.setPerformative(ACLMessage.CONFIRM);
+            reply.setContent(String.valueOf(sum));
+            send(reply);
+            
+        } catch (Exception e) {
+            
+        }
+    }
+}
+```
+
+* Работа с несколькими координаторами
+
+Вывод из логов
+```
+INFO: Получен запрос от rma: "1,100"
+INFO: Найдено вычислителей: 3
+
+...
+
+Задача отправлена: calc1: 1 → 34
+Задача отправлена: calc2: 35 → 67
+Задача отправлена: calc3: 68 → 100
+...
+
+INFO: Ожидание ответов от 3 вычислителей...
+нояб. 05, 2025 2:33:46 PM main.CalculatorAgent$CalculationTask run
+INFO: calc2 начал вычисление в отдельном потоке...
+нояб. 05, 2025 2:33:46 PM main.CalculatorAgent$CalculationTask run
+INFO: calc1 начал вычисление в отдельном потоке...
+нояб. 05, 2025 2:33:46 PM main.CalculatorAgent$CalculationTask run
+INFO: calc3 начал вычисление в отдельном потоке...
+нояб. 05, 2025 2:33:51 PM main.CalculatorAgent$CalculationTask run
+INFO: Ответ отправлен координатору coordinator1: 1683
+нояб. 05, 2025 2:33:51 PM main.CalculatorAgent$CalculationTask run
+INFO: Ответ отправлен координатору coordinator1: 595
+нояб. 05, 2025 2:33:51 PM main.Coordinator$MainBehaviour handleReply
+INFO: Получен ответ от calc2: 1683 (накоплено: 1683)
+нояб. 05, 2025 2:33:51 PM main.Coordinator$MainBehaviour handleReply
+INFO: Получен ответ от calc1: 595 (накоплено: 2278)
+нояб. 05, 2025 2:33:51 PM main.CalculatorAgent$CalculationTask run
+INFO: Ответ отправлен координатору coordinator1: 2772
+нояб. 05, 2025 2:33:51 PM main.Coordinator$MainBehaviour handleReply
+INFO: Получен ответ от calc3: 2772 (накоплено: 5050)
+нояб. 05, 2025 2:33:51 PM main.Coordinator$MainBehaviour handleReply
+INFO: Итог отправлен клиенту: 5050
+```
+Snapshot from Sniffer (выделенная область - взаимодействие 2 координаторов с 1 вычислителем)
+![img_1.png](img_1.png)
+
 
 
