@@ -14,6 +14,7 @@ public class Main {
 
         Profile p = new ProfileImpl();
         p.setParameter(Profile.MAIN_PORT, "1199");
+        p.setParameter(Profile.GUI, "true");
 
         AgentContainer container = rt.createMainContainer(p);
         if (container == null) {
@@ -59,8 +60,8 @@ public class Main {
 
         // Ждем завершения всех вычислений
         Thread.sleep(20000);
-        System.out.println("\n=== Завершение работы ===");
-        System.exit(0);
+        //System.out.println("\n=== Завершение работы ===");
+        //System.exit(0);
     }
 
     private static void sendRequest(AgentContainer container, String receiver, String content, String clientName) throws ControllerException {
