@@ -1,51 +1,71 @@
 package main;
 
 import jade.core.Agent;
-import jade.core.AID;
 import jade.core.behaviours.OneShotBehaviour;
 import jade.lang.acl.ACLMessage;
-import jade.lang.acl.MessageTemplate;
+import jade.util.Logger;
+import java.util.Date;
 
 public class ClientAgent extends Agent {
+    private Logger logger = Logger.getMyLogger(getClass().getName());
+    private String coordinatorName;
+    private String content;
+
     @Override
     protected void setup() {
         Object[] args = getArguments();
-        if (args.length < 2) {
-            System.err.println("❌ Ошибка: укажите получателя и содержимое");
+        if (args != null && args.length >= 2) {
+            coordinatorName = (String) args[0];
+            content = (String) args[1];
+        } else {
+            logger.severe("❌ Не указаны параметры: coordinatorName и content");
+            doDelete();
             return;
         }
 
-        String receiverName = (String) args[0];
-        String content = (String) args[1];
+        logger.info("Клиент " + getLocalName() + " создан. Координатор: " + coordinatorName);
+        System.out.println("Hello! Client Agent " + getAID().getName() + " is ready.");
 
-        System.out.println("Клиент " + getLocalName() + " отправил: " + content + " → " + receiverName);
+        addBehaviour(new RequestBehaviour());
+    }
 
-        addBehaviour(new OneShotBehaviour() {
-            @Override
-            public void action() {
-                AID receiverAID = new AID(receiverName, AID.ISLOCALNAME);
+    private class RequestBehaviour extends OneShotBehaviour {
+        @Override
+        public void action() {
+            try {
+                ACLMessage request = new ACLMessage(ACLMessage.REQUEST);
+                request.addReceiver(getAID(coordinatorName));
+                request.setContent(content);
+                request.setReplyByDate(new Date(System.currentTimeMillis() + 30000));
 
-                ACLMessage msg = new ACLMessage(ACLMessage.REQUEST);
-                msg.addReceiver(receiverAID);
-                msg.setContent(content);
-                send(msg);
+                logger.info("📤 Отправка запроса координатору " + coordinatorName +
+                        ": " + content);
+                send(request);
 
-                MessageTemplate template = MessageTemplate.or(
-                        MessageTemplate.MatchPerformative(ACLMessage.INFORM),
-                        MessageTemplate.MatchPerformative(ACLMessage.REFUSE)
-                );
-
-                ACLMessage reply = myAgent.blockingReceive(template, 10000);
+                // Ждем ответ
+                ACLMessage reply = myAgent.blockingReceive(30000);
                 if (reply != null) {
-                    if (reply.getPerformative() == ACLMessage.INFORM) {
-                        System.out.println("📩 Ответ для " + getLocalName() + ": " + reply.getContent());
-                    } else if (reply.getPerformative() == ACLMessage.REFUSE) {
-                        System.out.println("🚫 Запрос отклонён: " + reply.getContent());
+                    switch (reply.getPerformative()) {
+                        case ACLMessage.INFORM:
+                            logger.info("✅ Получен результат: " + reply.getContent());
+                            System.out.println("🎯 Результат для клиента " + getLocalName() +
+                                    ": " + reply.getContent());
+                            break;
+                        case ACLMessage.REFUSE:
+                            logger.warning("❌ Координатор отказал: " + reply.getContent());
+                            break;
+                        case ACLMessage.FAILURE:
+                            logger.severe("❌ Ошибка координатора: " + reply.getContent());
+                            break;
+                        default:
+                            logger.warning("⚠️ Неизвестный ответ: " + reply.getContent());
                     }
                 } else {
-                    System.out.println("❌ Ответ не получен (таймаут)");
+                    logger.severe("⏰ Таймаут ожидания ответа");
                 }
+            } catch (Exception e) {
+                logger.severe("❌ Ошибка при отправке запроса: " + e.getMessage());
             }
-        });
+        }
     }
 }
