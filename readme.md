@@ -162,3 +162,8 @@ INFO: Result collection completed. Total sum: 55
 Разделить главный контейнер и контейнер, из-под которого запускаются агенты.
 
 ![main_and_agent_containers](./img/ex_06_1e/main_and_agent_containers.png)
+
+### Задача 2b (ветка practice_06_ex_2_b)
+Разделить главный контейнер и контейнер, из-под которого запускаются агенты.
+
+![main_and_agent_containers](./img/ex_06_2b/main_and_agent_containers.png)
