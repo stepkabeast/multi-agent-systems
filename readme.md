@@ -129,5 +129,29 @@ INFO: Итог отправлен клиенту: 5050
 Snapshot from Sniffer (выделенная область - взаимодействие 2 координаторов с 1 вычислителем)
 ![img_1.png](img_1.png)
 
+### Задача 1д (ветка practice_05_ex_1_d)
 
+Реализовать взаимодействие «заказчика» и «координаторов» через ContractNet.
+
+![sniffer_contract_net](./img/ex_05_1d/sniffer_contract_net.png)
+После извещений координаторов, клиентом, о предложении, клиент выбирает лидера по **наименьшей** стоимости.
+```
+INFO: Received 3 proposals.
+нояб. 17, 2025 11:54:20 PM main.agents.client.ContractNetInitiatorBehaviour handleAllResponses
+INFO: Accepted proposal from coordinator3 (cost: 40)
+```
+![cost_propose](./img/ex_05_1d/cost_propose.png)
+"Победивший координатор" делит задачу между вычислителями.
+```
+INFO: Starting calculation for interval [1, 4]
+нояб. 17, 2025 11:54:20 PM main.agents.calculator.SumCalculationBehaviour action
+INFO: Starting calculation for interval [8, 10]
+нояб. 17, 2025 11:54:20 PM main.agents.calculator.SumCalculationBehaviour action
+INFO: Starting calculation for interval [5, 7]
+```
+Итог
+````
+INFO: Result collection completed. Total sum: 55
+[client] Calculation completed: 55
+````
 
