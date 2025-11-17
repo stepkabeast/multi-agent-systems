@@ -167,3 +167,15 @@ INFO: Result collection completed. Total sum: 55
 Разделить главный контейнер и контейнер, из-под которого запускаются агенты.
 
 ![main_and_agent_containers](./img/ex_06_2b/main_and_agent_containers.png)
+
+### Задача 2v (ветка practice_06_ex_2_v)
+Обеспечить работу алгоритма в циклическом графе.
+
+```java
+AgentController node1 = agentContainer.createNewAgent("a", NodeAgent.class.getName(), new Object[]{"b"});
+AgentController node2 = agentContainer.createNewAgent("b", NodeAgent.class.getName(), new Object[]{"a", "c"});
+AgentController node3 = agentContainer.createNewAgent("c", NodeAgent.class.getName(), new Object[]{"b", "d"});
+AgentController node4 = agentContainer.createNewAgent("d", NodeAgent.class.getName(), new Object[]{"c", "a"});
+```
+
+![cyclic_graph](./img/ex_06_2v/cyclic_graph.png)
