@@ -13,22 +13,40 @@ import jade.util.Logger;
 
 public class Main {
     private static final Logger logger = Logger.getMyLogger(Main.class.getName());
+    private static final String HOST = "localhost";
+    private static final int PORT = 1099;
 
     public static void main(String[] args) {
         try {
             logger.info("Starting Distributed Calculation System...");
-            Runtime runtime = Runtime.instance();
-            Profile profile = new ProfileImpl();
-            profile.setParameter(Profile.GUI, "true");
 
-            AgentContainer mainContainer = runtime.createMainContainer(profile);
-            AgentController client = mainContainer.createNewAgent("client", AgentClient.class.getName(), null);
+            // Main container
+            Runtime runtime = Runtime.instance();
+            Profile mainProfile = new ProfileImpl();
+            mainProfile.setParameter(Profile.MAIN, "true");
+            mainProfile.setParameter(Profile.MAIN_HOST, HOST);
+            mainProfile.setParameter(Profile.MAIN_PORT, String.valueOf(PORT));
+            mainProfile.setParameter(Profile.GUI, "true");
+
+            AgentContainer mainContainer = runtime.createMainContainer(mainProfile);
+            logger.info("Main container started on " + HOST + ":" + PORT);
+
+            // Agent container
+            Profile agentProfile = new ProfileImpl();
+            agentProfile.setParameter(Profile.MAIN_HOST, HOST);
+            agentProfile.setParameter(Profile.MAIN_PORT, String.valueOf(PORT));
+            agentProfile.setParameter(Profile.CONTAINER_NAME, "AgentContainer");
+
+            AgentContainer agentContainer = runtime.createAgentContainer(agentProfile);
+            logger.info("Agent container created and connected to main platform");
+
+            AgentController client = agentContainer.createNewAgent("client", AgentClient.class.getName(), null);
             client.start();
-            logger.info("Client agent started");
+            logger.info("Client agent started in agent container");
 
             for (int i = 1; i <= 3; i++) {
                 String agentName = "coordinator" + i;
-                AgentController coordinator = mainContainer.createNewAgent(
+                AgentController coordinator = agentContainer.createNewAgent(
                         agentName, AgentCoordinator.class.getName(), null
                 );
                 coordinator.start();
@@ -37,15 +55,19 @@ public class Main {
 
             for (int i = 1; i <= 3; i++) {
                 String agentName = "calculator" + i;
-                AgentController calculator = mainContainer.createNewAgent(
+                AgentController calculator = agentContainer.createNewAgent(
                         agentName, AgentCalculator.class.getName(), null
                 );
                 calculator.start();
                 logger.info("Calculator agent started: " + agentName);
             }
 
-            logger.info("All agents started successfully!");
+            logger.info("All agents started successfully in agent container!");
             System.out.println("Distributed Calculation System is running!");
+
+            synchronized (Main.class) {
+                Main.class.wait();
+            }
 
         } catch (StaleProxyException e) {
             logger.log(Logger.SEVERE, "Failed to start agents", e);

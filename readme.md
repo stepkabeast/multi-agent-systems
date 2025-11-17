@@ -127,6 +127,7 @@ INFO: Получен ответ от calc3: 2772 (накоплено: 5050)
 INFO: Итог отправлен клиенту: 5050
 ```
 Snapshot from Sniffer (выделенная область - взаимодействие 2 координаторов с 1 вычислителем)
+
 ![img_1.png](img_1.png)
 
 ### Задача 1д (ветка practice_05_ex_1_d)
@@ -134,6 +135,7 @@ Snapshot from Sniffer (выделенная область - взаимодей�
 Реализовать взаимодействие «заказчика» и «координаторов» через ContractNet.
 
 ![sniffer_contract_net](./img/ex_05_1d/sniffer_contract_net.png)
+
 После извещений координаторов, клиентом, о предложении, клиент выбирает лидера по **наименьшей** стоимости.
 ```
 INFO: Received 3 proposals.
@@ -141,6 +143,7 @@ INFO: Received 3 proposals.
 INFO: Accepted proposal from coordinator3 (cost: 40)
 ```
 ![cost_propose](./img/ex_05_1d/cost_propose.png)
+
 "Победивший координатор" делит задачу между вычислителями.
 ```
 INFO: Starting calculation for interval [1, 4]
@@ -155,3 +158,7 @@ INFO: Result collection completed. Total sum: 55
 [client] Calculation completed: 55
 ````
 
+### Задача 1е (ветка practice_06_ex_1_e)
+Разделить главный контейнер и контейнер, из-под которого запускаются агенты.
+
+![main_and_agent_containers](./img/ex_06_1e/main_and_agent_containers.png)
