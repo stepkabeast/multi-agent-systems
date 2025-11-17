@@ -26,8 +26,5 @@
             AgentController node4 = container.createNewAgent("d", NodeAgent.class.getName(), new Object[]{"c"});
             node4.start();
 
-
-//            AgentController sampleAgent = container.createNewAgent("sampleAgent", SampleAgent.class.getName(), new Object[]{});
-//            sampleAgent.start();
         }
     }
