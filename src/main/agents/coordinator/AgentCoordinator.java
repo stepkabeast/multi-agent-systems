@@ -1,6 +1,7 @@
 package main.agents.coordinator;
 
 import jade.core.Agent;
+import jade.core.behaviours.DataStore;
 import jade.core.behaviours.FSMBehaviour;
 import jade.domain.DFService;
 import jade.domain.FIPAException;
@@ -65,21 +66,21 @@ public class AgentCoordinator extends Agent {
 
     private void setupFSM() {
         FSMBehaviour fsm = new FSMBehaviour(this);
+        DataStore sharedDataStore = new DataStore();
 
-        // Создание и настройка поведений
         ProposalHandlerBehaviour proposalHandler = new ProposalHandlerBehaviour(this);
         ResultCollectorBehaviour resultCollector = new ResultCollectorBehaviour(this);
 
-        // Регистрация состояний
+        proposalHandler.setDataStore(sharedDataStore);
+        resultCollector.setDataStore(sharedDataStore);
+
         fsm.registerFirstState(proposalHandler, STATE_PROPOSAL_HANDLER);
         fsm.registerState(resultCollector, STATE_RESULT_COLLECTOR);
 
-        // Регистрация переходов
         fsm.registerTransition(STATE_PROPOSAL_HANDLER, STATE_RESULT_COLLECTOR, TRANSITION_TO_COLLECTION);
         fsm.registerTransition(STATE_PROPOSAL_HANDLER, STATE_PROPOSAL_HANDLER, TRANSITION_CONTINUE);
         fsm.registerDefaultTransition(STATE_RESULT_COLLECTOR, STATE_PROPOSAL_HANDLER);
 
         addBehaviour(fsm);
-        logger.fine("FSM behavior initialized with states: " + STATE_PROPOSAL_HANDLER + ", " + STATE_RESULT_COLLECTOR);
     }
 }
