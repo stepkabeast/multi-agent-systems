@@ -49,7 +49,7 @@ public class Main {
             node3.start();
             logger.info("Agent c started");
 
-            AgentController node4 = agentContainer.createNewAgent("d", NodeAgent.class.getName(), new Object[]{"c"});
+            AgentController node4 = agentContainer.createNewAgent("d", NodeAgent.class.getName(), new Object[]{"c", "a"});
             node4.start();
             logger.info("Agent d started");
 
