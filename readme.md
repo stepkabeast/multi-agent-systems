@@ -115,15 +115,15 @@ INFO: calc3 начал вычисление в отдельном потоке..
 INFO: Ответ отправлен координатору coordinator1: 1683
 нояб. 05, 2025 2:33:51 PM main.CalculatorAgent$CalculationTask run
 INFO: Ответ отправлен координатору coordinator1: 595
-нояб. 05, 2025 2:33:51 PM main.Coordinator$MainBehaviour handleReply
+нояб. 05, 2025 2:33:51 PM main.agents.coordinator.Coordinator$MainBehaviour handleReply
 INFO: Получен ответ от calc2: 1683 (накоплено: 1683)
-нояб. 05, 2025 2:33:51 PM main.Coordinator$MainBehaviour handleReply
+нояб. 05, 2025 2:33:51 PM main.agents.coordinator.Coordinator$MainBehaviour handleReply
 INFO: Получен ответ от calc1: 595 (накоплено: 2278)
 нояб. 05, 2025 2:33:51 PM main.CalculatorAgent$CalculationTask run
 INFO: Ответ отправлен координатору coordinator1: 2772
-нояб. 05, 2025 2:33:51 PM main.Coordinator$MainBehaviour handleReply
+нояб. 05, 2025 2:33:51 PM main.agents.coordinator.Coordinator$MainBehaviour handleReply
 INFO: Получен ответ от calc3: 2772 (накоплено: 5050)
-нояб. 05, 2025 2:33:51 PM main.Coordinator$MainBehaviour handleReply
+нояб. 05, 2025 2:33:51 PM main.agents.coordinator.Coordinator$MainBehaviour handleReply
 INFO: Итог отправлен клиенту: 5050
 ```
 Snapshot from Sniffer (выделенная область - взаимодействие 2 координаторов с 1 вычислителем)
