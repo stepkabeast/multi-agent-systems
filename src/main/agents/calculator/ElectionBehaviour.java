@@ -5,18 +5,22 @@ import jade.core.Agent;
 import jade.core.behaviours.DataStore;
 import jade.core.behaviours.FSMBehaviour;
 import jade.core.behaviours.OneShotBehaviour;
+import jade.core.behaviours.WakerBehaviour;
 import jade.domain.DFService;
 import jade.domain.FIPAException;
 import jade.domain.FIPAAgentManagement.DFAgentDescription;
 import jade.domain.FIPAAgentManagement.ServiceDescription;
 import jade.util.Logger;
+
 import java.util.Arrays;
 import java.util.Set;
 import java.util.stream.Collectors;
+
 import static main.agents.coordinator.AgentCoordinator.STATE_PROPOSAL_HANDLER;
 import static main.agents.coordinator.AgentCoordinator.STATE_RESULT_COLLECTOR;
 import static main.agents.coordinator.AgentCoordinator.TRANSITION_CONTINUE;
 import static main.agents.coordinator.AgentCoordinator.TRANSITION_TO_COLLECTION;
+
 import main.agents.coordinator.ProposalHandlerBehaviour;
 import main.agents.coordinator.ResultCollectorBehaviour;
 
@@ -26,7 +30,7 @@ public class ElectionBehaviour extends OneShotBehaviour {
     private static final String CALCULATOR_SERVICE_TYPE = "calculation";
     private static final int ELECTION_TIMEOUT = 5000;
 
-    private static volatile boolean electionCompleted = false;
+    public static volatile boolean electionCompleted = false;
 
     @Override
     public void action() {
@@ -156,10 +160,66 @@ public class ElectionBehaviour extends OneShotBehaviour {
             fsm.registerDefaultTransition(STATE_RESULT_COLLECTOR, STATE_PROPOSAL_HANDLER);
 
             myAgent.addBehaviour(fsm);
-            logger.info("Coordinator FSM initialized. Ready to handle client requests and manage calculators.");
+            ((AgentCalculator) myAgent).setCoordinator(true);
+            myAgent.addBehaviour(new SuicideBehaviour(myAgent));
+
+            logger.info("Coordinator FSM initialized. Will self-destruct in 30 seconds.");
 
         } catch (FIPAException e) {
             logger.log(Logger.SEVERE, "Failed to promote agent to coordinator", e);
+        }
+    }
+
+    public static void deregisterAsCoordinator(Agent agent) {
+        try {
+            DFAgentDescription template = new DFAgentDescription();
+            template.setName(agent.getAID());
+
+            ServiceDescription sd = new ServiceDescription();
+            sd.setType("coordinator");
+            template.addServices(sd);
+
+            DFService.deregister(agent, template);
+            logger.fine("Coordinator service deregistered by request");
+        } catch (FIPAException e) {
+            logger.log(Logger.WARNING, "Failed to deregister coordinator service", e);
+        }
+    }
+
+    /**
+     * Поведение для автоматического завершения координатора через 30 секунд
+     */
+    private static class SuicideBehaviour extends WakerBehaviour {
+        private final Agent myAgent;
+
+        public SuicideBehaviour(Agent agent) {
+            super(agent, 30000);
+            this.myAgent = agent;
+        }
+
+        @Override
+        protected void onWake() {
+            Logger.getMyLogger(ElectionBehaviour.class.getName())
+                    .info("Coordinator is committing suicide after 30 seconds...");
+
+            // Дерегистрируем сервис coordinator
+            try {
+                DFAgentDescription template = new DFAgentDescription();
+                template.setName(myAgent.getAID());
+
+                ServiceDescription sd = new ServiceDescription();
+                sd.setType("coordinator");
+                template.addServices(sd);
+
+                DFService.deregister(myAgent, template);
+                Logger.getMyLogger(ElectionBehaviour.class.getName()).info("Coordinator deregistered from DF");
+            } catch (FIPAException e) {
+                Logger.getMyLogger(ElectionBehaviour.class.getName()).warning("Failed to deregister: " + e.getMessage());
+            }
+
+            electionCompleted = false;
+            // Перезапускаем выборы
+            myAgent.addBehaviour(new ElectionBehaviour());
         }
     }
 }

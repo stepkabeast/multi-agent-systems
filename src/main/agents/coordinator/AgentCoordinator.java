@@ -15,7 +15,7 @@ public class AgentCoordinator extends Agent {
 
     public static final String COORDINATOR_SERVICE_TYPE = "coordinator";
     public static final String CALCULATOR_SERVICE_TYPE = "calculation";
-    public static final Logger logger = Logger.getMyLogger(AgentCoordinator.class.getName());
+    private static final Logger logger = Logger.getMyLogger(AgentCoordinator.class.getName());
 
     // Состояния FSM
     public static final String STATE_PROPOSAL_HANDLER = "proposal-handler";
@@ -34,8 +34,12 @@ public class AgentCoordinator extends Agent {
 
     @Override
     protected void takeDown() {
-        deregisterFromDF();
-        logger.info("Coordinator agent " + getLocalName() + " terminated");
+        try {
+            DFService.deregister(this);
+            logger.info("Coordinator agent " + getLocalName() + " successfully deregistered and terminated");
+        } catch (FIPAException e) {
+            logger.warning("Error during deregistration: " + e.getMessage());
+        }
     }
 
     private void registerWithDF() {
@@ -52,15 +56,6 @@ public class AgentCoordinator extends Agent {
             logger.fine("Registered in DF as '" + COORDINATOR_SERVICE_TYPE + "' service");
         } catch (FIPAException e) {
             logger.log(Logger.SEVERE, "DF registration failed", e);
-        }
-    }
-
-    private void deregisterFromDF() {
-        try {
-            DFService.deregister(this);
-            logger.fine("Deregistered from DF");
-        } catch (FIPAException e) {
-            logger.log(Logger.WARNING, "DF deregistration failed", e);
         }
     }
 

@@ -13,10 +13,7 @@ public class AgentClient extends Agent {
     protected void setup() {
         logger.info("Client agent " + getLocalName() + " initialized");
 
-        // Основной обработчик запросов на вычисления
         addBehaviour(new ClientRequestHandlerBehaviour(this, threadedFactory));
-
-        // Обработчик финальных результатов
         addBehaviour(new CalculationResultHandler(this));
     }
 
