@@ -12,12 +12,8 @@ import jade.lang.acl.ACLMessage;
 import jade.lang.acl.MessageTemplate;
 import jade.util.Logger;
 
-import java.util.Set;
-import java.util.stream.Collectors;
-
 public class ClientRequestHandlerBehaviour extends Behaviour {
 
-    private static final String COORDINATOR_SERVICE_TYPE = "coordinator";
     private static final Logger logger = Logger.getMyLogger(ClientRequestHandlerBehaviour.class.getName());
     private static final MessageTemplate REQUEST_TEMPLATE =
             MessageTemplate.and(
@@ -51,7 +47,7 @@ public class ClientRequestHandlerBehaviour extends Behaviour {
 
     @Override
     public int onEnd() {
-        requestProcessed = false; // Reset for potential reuse
+        requestProcessed = false;
         return 0;
     }
 
@@ -64,7 +60,7 @@ public class ClientRequestHandlerBehaviour extends Behaviour {
                     " from " + originalRequester.getLocalName());
 
             if (isValidInterval(intervalContent)) {
-                initiateContractNetProtocol(intervalContent, originalRequester);
+                initiateContractNetProtocol(request, intervalContent);
                 requestProcessed = true;
             } else {
                 sendInvalidRequestResponse(request, intervalContent);
@@ -80,53 +76,53 @@ public class ClientRequestHandlerBehaviour extends Behaviour {
         return intervalContent != null && intervalContent.matches("\\d+\\s*,\\s*\\d+");
     }
 
-    private void initiateContractNetProtocol(String intervalContent, AID originalRequester) {
+    private void initiateContractNetProtocol(ACLMessage request, String intervalContent) {
         try {
-            Set<AID> coordinators = discoverCoordinatorAgents();
-
-            if (coordinators.isEmpty()) {
-                logger.warning("No coordinator agents found. Cannot process request.");
+            AID coordinator = findCoordinatorAgent();
+            if (coordinator == null) {
+                logger.warning("No coordinator agent found in DF.");
+                sendErrorResponse(request, "No coordinator available at the moment.");
                 return;
             }
 
-            ACLMessage cfp = createCFPMessage(intervalContent, coordinators);
+            ACLMessage cfp = new ACLMessage(ACLMessage.CFP);
+            cfp.setProtocol("fipa-contract-net");
+            cfp.setContent(intervalContent);
+            cfp.addReceiver(coordinator);
+            cfp.setReplyByDate(calculateTimeout());
+
+            AID originalRequester = request.getSender();
             myAgent.addBehaviour(threadedFactory.wrap(
                     new ContractNetInitiatorBehaviour(myAgent, cfp, originalRequester)
             ));
 
-            logger.info("Initiated Contract Net protocol with " + coordinators.size() +
-                    " coordinators for interval: " + intervalContent);
+            logger.info("Sent CFP to coordinator: " + coordinator.getLocalName());
 
-        } catch (FIPAException e) {
-            logger.log(Logger.SEVERE, "Failed to discover coordinator agents", e);
+        } catch (Exception e) {
+            logger.log(Logger.SEVERE, "Error during coordinator interaction", e);
+            sendErrorResponse(request, "Internal error: " + e.getMessage());
         }
     }
 
-    private Set<AID> discoverCoordinatorAgents() throws FIPAException {
-        DFAgentDescription template = new DFAgentDescription();
-        ServiceDescription serviceDesc = new ServiceDescription();
-        serviceDesc.setType(COORDINATOR_SERVICE_TYPE);
-        template.addServices(serviceDesc);
+    private AID findCoordinatorAgent() {
+        try {
+            DFAgentDescription template = new DFAgentDescription();
+            ServiceDescription sd = new ServiceDescription();
+            sd.setType("coordinator");
+            template.addServices(sd);
 
-        DFAgentDescription[] results = DFService.search(myAgent, template);
-
-        return java.util.Arrays.stream(results)
-                .map(DFAgentDescription::getName)
-                .collect(Collectors.toSet());
-    }
-
-    private ACLMessage createCFPMessage(String intervalContent, Set<AID> coordinators) {
-        ACLMessage cfp = new ACLMessage(ACLMessage.CFP);
-        cfp.setProtocol("fipa-contract-net");
-        cfp.setContent(intervalContent);
-        cfp.setReplyByDate(calculateTimeout()); // Set reasonable timeout
-
-        coordinators.forEach(cfp::addReceiver);
-        return cfp;
+            DFAgentDescription[] results = DFService.search(myAgent, template);
+            if (results.length > 0) {
+                return results[0].getName();
+            }
+        } catch (FIPAException e) {
+            logger.warning("Failed to search for coordinator: " + e.getMessage());
+        }
+        return null;
     }
 
     private java.util.Date calculateTimeout() {
-        long timeout = System.currentTimeMillis() + 30000; // 30 seconds timeout
+        long timeout = System.currentTimeMillis() + 30000;
         return new java.util.Date(timeout);
     }
 
@@ -144,5 +140,6 @@ public class ClientRequestHandlerBehaviour extends Behaviour {
         response.setPerformative(ACLMessage.FAILURE);
         response.setContent(error);
         myAgent.send(response);
+        logger.warning("Sent error response: " + error);
     }
 }
