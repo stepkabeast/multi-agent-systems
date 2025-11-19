@@ -13,17 +13,17 @@ import jade.util.Logger;
 
 public class AgentCoordinator extends Agent {
 
-    private static final String COORDINATOR_SERVICE_TYPE = "coordinator";
-    private static final String CALCULATOR_SERVICE_TYPE = "calculation";
-    private static final Logger logger = Logger.getMyLogger(AgentCoordinator.class.getName());
+    public static final String COORDINATOR_SERVICE_TYPE = "coordinator";
+    public static final String CALCULATOR_SERVICE_TYPE = "calculation";
+    public static final Logger logger = Logger.getMyLogger(AgentCoordinator.class.getName());
 
     // Состояния FSM
-    private static final String STATE_PROPOSAL_HANDLER = "proposal-handler";
-    private static final String STATE_RESULT_COLLECTOR = "result-collector";
+    public static final String STATE_PROPOSAL_HANDLER = "proposal-handler";
+    public static final String STATE_RESULT_COLLECTOR = "result-collector";
 
     // Коды переходов
-    private static final int TRANSITION_CONTINUE = 0;
-    private static final int TRANSITION_TO_COLLECTION = 1;
+    public static final int TRANSITION_CONTINUE = 0;
+    public static final int TRANSITION_TO_COLLECTION = 1;
 
     @Override
     protected void setup() {
