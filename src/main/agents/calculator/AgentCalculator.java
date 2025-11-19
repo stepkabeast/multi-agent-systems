@@ -2,6 +2,7 @@ package main.agents.calculator;
 
 import jade.core.Agent;
 import jade.core.behaviours.ThreadedBehaviourFactory;
+import jade.core.behaviours.WakerBehaviour;
 import jade.domain.DFService;
 import jade.domain.FIPAException;
 import jade.domain.FIPAAgentManagement.DFAgentDescription;
@@ -18,8 +19,15 @@ public class AgentCalculator extends Agent {
     @Override
     protected void setup() {
         registerWithDF();
+        logger.info("Calculator agent " + getLocalName() + " initialized");
+        addBehaviour(new WakerBehaviour(this, 25000) {
+            @Override
+            protected void onWake() {
+                logger.info("Starting election process after 25-second delay");
+                myAgent.addBehaviour(new ElectionBehaviour());
+            }
+        });
         addBehaviour(new CalculationRequestBehaviour(this, tbf));
-        logger.info("Calculator agent " + getLocalName() + " initialized successfully");
     }
 
     @Override
