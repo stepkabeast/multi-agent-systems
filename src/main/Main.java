@@ -44,14 +44,14 @@ public class Main {
             client.start();
             logger.info("Client agent started in agent container");
 
-            for (int i = 1; i <= 3; i++) {
+            /*for (int i = 1; i <= 3; i++) {
                 String agentName = "coordinator" + i;
                 AgentController coordinator = agentContainer.createNewAgent(
                         agentName, AgentCoordinator.class.getName(), null
                 );
                 coordinator.start();
                 logger.info("Coordinator agent started: " + agentName);
-            }
+            }*/
 
             for (int i = 1; i <= 3; i++) {
                 String agentName = "calculator" + i;
